@@ -1099,6 +1099,28 @@ export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBa
 	wrap?: boolean
 
 	/**
+	 * Indicates this text run contains OMML math content
+	 * When true, the ommlXml property should contain the OMML XML to render
+	 */
+	isMath?: boolean
+	/**
+	 * Pre-formatted OMML XML string (already converted from LaTeX/MathML)
+	 * This should be the inner content of <m:oMath> (without the wrapper tag)
+	 */
+	ommlXml?: string
+	/**
+	 * Indicates this is a block/display math equation
+	 * When true, wraps the OMML in <m:oMathPara> for centered display
+	 * @default false
+	 */
+	isBlockMath?: boolean
+	/**
+	 * Original LaTeX string for fallback display in apps that don't support OMML
+	 * Used in mc:Fallback element for Google Slides compatibility
+	 */
+	latexFallback?: string
+
+	/**
 	 * Whether "Fit to Shape?" is enabled
 	 * @deprecated v3.3.0 - use `fit`
 	 */

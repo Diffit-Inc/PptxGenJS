@@ -1,4 +1,3 @@
-/* PptxGenJS 4.0.1 @ 2025-06-25T23:35:35.098Z */
 import JSZip from 'jszip';
 
 /******************************************************************************
@@ -6020,6 +6019,34 @@ function genXmlTextRun(textObj) {
             <a:endParaRPr lang="en-US" dirty="0"/>
         </a:p>
     */
+    var _a, _b, _c, _d, _e;
+    // Check for math content - OMML replaces the text run entirely
+    // Must be wrapped in <a14:m> for PowerPoint 2010+ compatibility
+    // Use mc:AlternateContent for apps that don't support OMML (like Google Slides)
+    if (((_a = textObj.options) === null || _a === void 0 ? void 0 : _a.isMath) && ((_b = textObj.options) === null || _b === void 0 ? void 0 : _b.ommlXml)) {
+        let ommlContent = textObj.options.ommlXml;
+        // Apply font size to math if specified
+        const mathFontSize = (_c = textObj.options) === null || _c === void 0 ? void 0 : _c.fontSize;
+        if (mathFontSize) {
+            const szValue = Math.round(mathFontSize * 100);
+            const rPrElement = `<a:rPr lang="en-US" sz="${szValue}"/>`;
+            // Inject <a:rPr> into <m:r> elements that don't have it (after opening <m:r> tag)
+            // The OMML from mathml2omml typically has: <m:r><m:t>text</m:t></m:r>
+            // We need: <m:r><a:rPr sz="..."/><m:t>text</m:t></m:r>
+            ommlContent = ommlContent.replace(/<m:r>(?!<a:rPr)/g, `<m:r>${rPrElement}`);
+            // Also inject into existing <a:rPr> tags that don't have sz
+            ommlContent = ommlContent.replace(/<a:rPr(?![^>]*sz=)([^>]*)>/g, `<a:rPr sz="${szValue}"$1>`);
+        }
+        const omml = `<m:oMath>${ommlContent}</m:oMath>`;
+        const mathJustify = ((_d = textObj.options) === null || _d === void 0 ? void 0 : _d.isBlockMath) ? 'center' : 'left';
+        const mathXml = `<a14:m><m:oMathPara><m:oMathParaPr><m:jc m:val="${mathJustify}"/></m:oMathParaPr>${omml}</m:oMathPara></a14:m>`;
+        // Get the original LaTeX for fallback display (stored in text field before clearing)
+        const fallbackText = ((_e = textObj.options) === null || _e === void 0 ? void 0 : _e.latexFallback) || '[math]';
+        const fallbackFontSize = mathFontSize ? ` sz="${Math.round(mathFontSize * 100)}"` : '';
+        const fallbackRun = `<a:r><a:rPr lang="en-US"${fallbackFontSize} i="1" dirty="0"><a:latin typeface="Cambria Math" pitchFamily="18" charset="0"/></a:rPr><a:t>${encodeXmlEntities(fallbackText)}</a:t></a:r>`;
+        // Wrap in mc:AlternateContent for compatibility
+        return `<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="a14">${mathXml}</mc:Choice><mc:Fallback>${fallbackRun}</mc:Fallback></mc:AlternateContent>`;
+    }
     // Return paragraph with text run
     return textObj.text ? `<a:r>${genXmlTextRunProperties(textObj.options, false)}<a:t>${encodeXmlEntities(textObj.text)}</a:t></a:r>` : '';
 }
@@ -6154,7 +6181,9 @@ function genXmlTextBody(slideObj) {
     else if (Array.isArray(slideObj.text)) {
         // Handle cases 4,5,6
         // NOTE: use cast as text is TextProps[]|TableCell[] and their `options` dont overlap (they share the same TextBaseProps though)
-        tmpTextObjects = slideObj.text.map(item => ({ text: item.text, options: item.options }));
+        tmpTextObjects = slideObj.text.map(item => {
+            return { text: item.text, options: item.options };
+        });
     }
     // STEP 4: Iterate over text objects, set text/options, break into pieces if '\n'/breakLine found
     tmpTextObjects.forEach((itext, idx) => {
@@ -6236,7 +6265,11 @@ function genXmlTextBody(slideObj) {
             textObj.options.paraSpaceBefore = textObj.options.paraSpaceBefore || opts.paraSpaceBefore;
             textObj.options.paraSpaceAfter = textObj.options.paraSpaceAfter || opts.paraSpaceAfter;
             paragraphPropXml = genXmlParagraphProperties(textObj, false);
-            strSlideXml += paragraphPropXml.replace('<a:pPr></a:pPr>', ''); // IMPORTANT: Empty "pPr" blocks will generate needs-repair/corrupt msg
+            // IMPORTANT: Only add paragraph properties ONCE at the start of the paragraph (idx === 0)
+            // Adding pPr for each text run creates invalid XML, especially when OMML math is present
+            if (idx === 0) {
+                strSlideXml += paragraphPropXml.replace('<a:pPr></a:pPr>', ''); // IMPORTANT: Empty "pPr" blocks will generate needs-repair/corrupt msg
+            }
             // C: Inherit any main options (color, fontSize, etc.)
             // NOTE: We only pass the text.options to genXmlTextRun (not the Slide.options),
             // so the run building function cant just fallback to Slide.color, therefore, we need to do that here before passing options below.
@@ -6492,7 +6525,8 @@ function makeXmlPresentationRels(slides) {
 function makeXmlSlide(slide) {
     return (`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}` +
         '<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
-        'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"' +
+        'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" ' +
+        'xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main"' +
         `${(slide === null || slide === void 0 ? void 0 : slide.hidden) ? ' show="0"' : ''}>` +
         `${slideObjectToXml(slide)}` +
         '<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>');
@@ -6532,7 +6566,7 @@ function makeXmlNotesSlide(slide) {
  */
 function makeXmlLayout(layout) {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-		<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" preserve="1">
+		<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" preserve="1">
 		${slideObjectToXml(layout)}
 		<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`;
 }
@@ -6547,7 +6581,7 @@ function makeXmlMaster(slide, layouts) {
     const layoutDefs = layouts.map((_layoutDef, idx) => `<p:sldLayoutId id="${LAYOUT_IDX_SERIES_BASE + idx}" r:id="rId${slide._rels.length + idx + 1}"/>`);
     let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF;
     strXml +=
-        '<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">';
+        '<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main">';
     strXml += slideObjectToXml(slide);
     strXml +=
         '<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>';

@@ -375,6 +375,30 @@ export function addChartDefinition(target: PresSlide, type: CHART_NAME | IChartM
 }
 
 /**
+ * Registers a math fallback image for use in mc:AlternateContent fallback.
+ * Unlike addImageDefinition, this does NOT create a visible shape - it only
+ * adds the image to _relsMedia for reference in mc:Fallback elements.
+ *
+ * @param {PresSlide} target - slide to add the image to
+ * @param {string} imageData - base64 encoded PNG image data (with header e.g. 'image/png;base64,...')
+ * @returns {number} The relationship ID (rId) to reference in mc:Fallback
+ */
+export function addMathFallbackImage(target: PresSlide, imageData: string): number {
+	const rId = getNewRelId(target)
+
+	target._relsMedia.push({
+		path: `mathfallback${rId}.png`,
+		type: 'image/png',
+		extn: 'png',
+		data: imageData,
+		rId: rId,
+		Target: `../media/mathfallback${rId}.png`,
+	})
+
+	return rId
+}
+
+/**
  * Adds an image object to a slide definition.
  * This method can be called with only two args (opt, target) - this is supposed to be the only way in future.
  * @param {ImageProps} `opt` - object containing `path`/`data`, `x`, `y`, etc.
