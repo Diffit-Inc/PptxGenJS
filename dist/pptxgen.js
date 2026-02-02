@@ -6046,7 +6046,8 @@ var PptxGenJS = (function (JSZip) {
             const fallbackFontSize = mathFontSize ? ` sz="${Math.round(mathFontSize * 100)}"` : '';
             const fallbackRun = `<a:r><a:rPr lang="en-US"${fallbackFontSize} i="1" dirty="0"><a:latin typeface="Cambria Math" pitchFamily="18" charset="0"/></a:rPr><a:t>${encodeXmlEntities(fallbackText)}</a:t></a:r>`;
             // Wrap in mc:AlternateContent for compatibility
-            return `<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="a14">${mathXml}</mc:Choice><mc:Fallback>${fallbackRun}</mc:Fallback></mc:AlternateContent>`;
+            const result = `<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="a14">${mathXml}</mc:Choice><mc:Fallback>${fallbackRun}</mc:Fallback></mc:AlternateContent>`;
+            return result;
         }
         // Return paragraph with text run
         return textObj.text ? `<a:r>${genXmlTextRunProperties(textObj.options, false)}<a:t>${encodeXmlEntities(textObj.text)}</a:t></a:r>` : '';
