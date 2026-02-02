@@ -1061,22 +1061,10 @@ function genXmlTextRun (textObj: TextProps): string {
 		</a:p>
 	*/
 
-	// DEBUG: Log all calls to genXmlTextRun to trace OMML support
-	if (textObj && textObj.options) {
-		console.log('[PPTXGEN-DEBUG] genXmlTextRun called with options:', JSON.stringify({
-			isMath: textObj.options.isMath,
-			hasOmmlXml: !!textObj.options.ommlXml,
-			ommlXmlLength: textObj.options.ommlXml ? textObj.options.ommlXml.length : 0,
-			text: textObj.text ? textObj.text.substring(0, 50) : null,
-			fontSize: textObj.options.fontSize
-		}))
-	}
-
 	// Check for math content - OMML replaces the text run entirely
 	// Must be wrapped in <a14:m> for PowerPoint 2010+ compatibility
 	// Use mc:AlternateContent for apps that don't support OMML (like Google Slides)
 	if (textObj.options?.isMath && textObj.options?.ommlXml) {
-		console.log('[PPTXGEN-DEBUG] ENTERING OMML CODE BLOCK!')
 		let ommlContent = textObj.options.ommlXml
 
 		// Apply font size to math if specified
@@ -1103,7 +1091,6 @@ function genXmlTextRun (textObj: TextProps): string {
 
 		// Wrap in mc:AlternateContent for compatibility
 		const result = `<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="a14">${mathXml}</mc:Choice><mc:Fallback>${fallbackRun}</mc:Fallback></mc:AlternateContent>`
-		console.log('[PPTXGEN-DEBUG] OMML XML generated, length:', result.length, 'starts with:', result.substring(0, 100))
 		return result
 	}
 
