@@ -1840,7 +1840,10 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
 
 	// STEP 4: Add sizes
 	strXml += `<p:sldSz cx="${pres.presLayout.width}" cy="${pres.presLayout.height}"/>`
-	strXml += `<p:notesSz cx="${pres.presLayout.height}" cy="${pres.presLayout.width}"/>`
+	// Notes page is a fixed 7.5x10in portrait page: makeXmlNotesMaster places its slide image and
+	// notes placeholders for that size. Deriving it from the slide (height x width) made a 16:9 deck's
+	// notes page narrower than those placeholders, so Google Slides cropped them when printing with notes.
+	strXml += `<p:notesSz cx="6858000" cy="9144000"/>`
 
 	// STEP 5: Add text styles
 	strXml += '<p:defaultTextStyle>'
