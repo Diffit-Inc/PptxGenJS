@@ -6743,7 +6743,7 @@ function makeXmlPresentation(pres) {
     strXml += `<p:notesMasterIdLst><p:notesMasterId r:id="rId${pres.slides.length + 2}"/></p:notesMasterIdLst>`;
     // STEP 4: Add sizes
     strXml += `<p:sldSz cx="${pres.presLayout.width}" cy="${pres.presLayout.height}"/>`;
-    strXml += `<p:notesSz cx="${pres.presLayout.height}" cy="${pres.presLayout.width}"/>`;
+    strXml += `<p:notesSz cx="6858000" cy="9144000"/>`;
     // STEP 5: Add text styles
     strXml += '<p:defaultTextStyle>';
     for (let idy = 1; idy < 10; idy++) {
